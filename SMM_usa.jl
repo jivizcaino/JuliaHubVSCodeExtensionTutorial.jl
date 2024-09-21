@@ -109,15 +109,15 @@ end
     μ       = [μ_c,μ_r]
     σ_cr    = ρ_cr*sqrt(σ_cc*σ_rr)
     Σ       = [σ_cc σ_cr;σ_cr σ_rr]  #Remember that this will be the var-cov mat of the normal, not the lognormal
-    z       = rand(Random.seed!(0),MvLogNormal(μ,Σ),10*N)
+    z       = rand(MersenneTwister(1234),MvLogNormal(μ,Σ),10*N)
     zc_base = z[1,:] .+ c
     zr_base = z[2,:] .+ c
     z_c_p99 = quantile(zc_base,0.95)
     z_r_p99 = quantile(zr_base,0.95)
     zc_base = zc_base[zc_base .< z_c_p99]
     zr_base = zr_base[zr_base .< z_r_p99]
-    zc_base = sample(Random.seed!(0),zc_base,N,replace=true)
-    zr_base = sample(Random.seed!(0),zr_base,N,replace=true)
+    zc_base = sample(MersenneTwister(1234),zc_base,N,replace=true)
+    zr_base = sample(MersenneTwister(1234),zr_base,N,replace=true)
 
     ih_c    = ih.(α_c,ηo_c,ρ,δ_c,gc,A,(a0:A))
     ih_r    = ih.(α_r,ηo_r,ρ,δ_r,gr,A,(a0:A))
@@ -297,8 +297,8 @@ end
     function choice_probabilities(ιc,ιr,V,wc,wr,Cc,Cr)
       #V = V_25_2000
       N, J, K = size(V)
-      εc = rand(Gumbel(0,ιc), N, K)  #Random utility shocks
-      εr = rand(Gumbel(0,ιr), N, K)  #Random utility shocks
+      εc = rand(MersenneTwister(1234),Gumbel(0,ιc), N, K)  #Random utility shocks
+      εr = rand(MersenneTwister(1234),Gumbel(0,ιr), N, K)  #Random utility shocks
       U           = zeros(Float64,N,J,K)
       U[:, 1, :]  = V[:, 1, :] .+ εc  # Base utility without cost adjustments
       U[:, 2, :]  = V[:, 2, :] .+ εr  # Base utility without cost adjustments
@@ -574,7 +574,7 @@ end
           choices_25_10[i] = 1  
       else
           choice_distribution = Categorical(individual_probs)
-          chosen_option = rand(Random.seed!(0),choice_distribution)
+          chosen_option = rand(choice_distribution)
           choices_25_10[i] = chosen_option
       end
     end
@@ -586,7 +586,7 @@ end
           choices_50_00[i] = 1  
       else
           choice_distribution = Categorical(individual_probs)
-          chosen_option = rand(Random.seed!(0),choice_distribution)
+          chosen_option = rand(choice_distribution)
           choices_50_00[i] = chosen_option
       end
     end
@@ -786,23 +786,23 @@ end
 end
 #--------------------------------------------------------------
 @everywhere begin
-  N = 300
+  N = 1000
   f_SSE(params) = compute_loss(params,N,Πc_25_2000,Πr_25_2000,Πc_50_2000,Πr_50_2000,Πc_25_2010,Πr_25_2010,πc_25_2000,πc_25_2010,πc_50_2000,DataMoments)                                              
 end
 
 @everywhere begin
-  ParamSpace    = [(0.01,1.50),     #σ_cc
-                   (0.01,1.50),      #σ_rr
-                  (0.05 ,10.00),      #wc                
-                  (0.05 ,10.00),      #wr
-                  (0.010,0.145),      #ηo_c 
-                  (0.010,0.145),      #ηo_r                        
-                  (0.01 ,0.50),      #α_c                
-                  (0.01 ,0.50),      #α_r
-                  (0.15 ,0.50),      #ηs_c 
-                  (0.15 ,0.50),      #ηs_r        
-                  (0.05 ,0.50),      #β_c             
-                  (0.05 ,0.50),      #β_r
+  ParamSpace    = [(0.01,5.00),       #σ_cc
+                   (0.01,5.00),       #σ_rr
+                  (0.05 ,12.00),      #wc                
+                  (0.05 ,12.00),      #wr
+                  (0.010,0.175),      #ηo_c 
+                  (0.010,0.175),      #ηo_r                        
+                  (0.01 ,0.50),       #α_c                
+                  (0.01 ,0.50),       #α_r
+                  (0.180 ,0.50),      #ηs_c 
+                  (0.180 ,0.50),      #ηs_r        
+                  (0.05 ,0.50),       #β_c             
+                  (0.05 ,0.50),       #β_r
                   (0.0001,0.025),     #gc             
                   (0.0001,0.025)]     #gr
 end
@@ -810,55 +810,113 @@ end
 
 #Best candidate found: [1.32572, 1.27935, 1.12539, 3.58418, 0.0940523, 0.108794, 0.269216, 0.205891, 0.763845, 0.260334, 0.425676, 0.358607]
 
+#=
 @everywhere begin
   x0_1 = [0.668284, 0.10000, 2.350, 7.500, 0.1032, 0.080145, 0.27000, 0.24000, 0.40000, 0.30000, 0.0180, 0.0075]
   x0_2 = [0.119116, 0.436606, 7.14199, 3.24426, 0.0719985, 0.0250895, 0.0304356, 0.0902823, 0.16014, 0.368885, 0.290427, 0.203623, 0.00386362, 0.0192517]
   x0_3 = [0.119116, 0.436606, 7.14199, 3.24426, 0.0719985, 0.0250895, 0.0304356, 0.0902823, 0.16014, 0.368885, 0.290427, 0.203623, 0.00386362, 0.0192517]
   x0_4 = [0.259856, 0.575783, 8.75284, 5.50769, 0.0423331, 0.0256126, 0.0383456, 0.0362173, 0.186142, 0.158567, 0.320196, 0.413851, 0.0145268, 0.0061316]
-  x0   = [x0_1,x0_2,x0_3,x0_4] 
+  x0_5 = [0.13099, 1.11802, 9.53921, 3.43716, 0.139539, 0.111527, 0.212741, 0.0650087, 0.150087, 0.172455, 0.446242, 0.138868, 0.0199314, 0.00902507]
+  x0_6 = [0.345916, 0.846632, 7.85866, 4.24132, 0.093411, 0.137842, 0.283302, 0.206142, 0.318091, 0.31171, 0.122788, 0.241492, 0.017149, 0.0120245]
+  x0_7 = [1.63806, 0.0368019, 6.07131, 4.61988, 0.131602, 0.132433, 0.416256, 0.400466, 0.285924, 0.406623, 0.460711, 0.440975, 0.00317352, 0.00984838]
+  sleep(180)
+el_res_para_5 = @elapsed res_para_4  = bboptimize(opt_problem_distri,MaxFuncEvals = 1200)
+  
+  x0   = [x0_1,x0_2,x0_3,x0_4,x0_5,x0_6,x0_7] 
 end
+=#
+@everywhere begin
+  x0_1 = [0.793034, 0.637955, 9.92422, 6.30334, 0.0820409, 0.151018, 0.349079, 0.178861, 0.259658, 0.201212, 0.0686504, 0.316916, 0.0168809, 0.00141555]     
+  x0_2 = [0.668284, 0.10000, 2.350, 7.500, 0.1032, 0.080145, 0.27000, 0.24000, 0.40000, 0.30000, 0.0180, 0.0075, 0.0168809, 0.00141555] 
+  x0_3 = [0.854889, 2.94503, 3.78461, 3.29875, 0.160988, 0.0951782, 0.221612, 0.405409, 0.49114, 0.364121, 0.201609, 0.390706, 0.0116729, 0.0152163]
+  x0   = [x0_1,x0_2,x0_3] 
+end
+
 
 #--------------------------------------------------------------------------------
 #RUN THE OPTIMIZATION PROCEDURE TO FIND THE PARAMETERS
 @everywhere begin    
   #opt_problem_norm   =  bbsetup(f_SSE;x0,SearchRange=ParamSpace,TraceMode=:verbose,NumDimensions=12,MaxFuncEvals=10000,Method=:adaptive_de_rand_1_bin_radiuslimited)
-  #opt_problem_distri =  bbsetup(f_SSE;x0,SearchRange=ParamSpace,TraceMode=:verbose,NumDimensions=12,MaxFuncEvals=10000,Method=:adaptive_de_rand_1_bin_radiuslimited,Workers = workers())
-  opt_problem_distri =  bbsetup(f_SSE;x0,SearchRange=ParamSpace,TraceMode=:verbose,NumDimensions=12,MaxFuncEvals=10000,Method=:adaptive_de_rand_1_bin_radiuslimited)
+  opt_problem_distri =  bbsetup(f_SSE;x0,SearchRange=ParamSpace,TraceMode=:verbose,NumDimensions=14,MaxFuncEvals=2000,Method=:adaptive_de_rand_1_bin_radiuslimited,Workers = workers())
+  #opt_problem_distri =  bbsetup(f_SSE;x0,SearchRange=ParamSpace,TraceMode=:verbose,NumDimensions=12,MaxFuncEvals=10000,Method=:adaptive_de_rand_1_bin_radiuslimited)
 end
 #--------------------------------------------------------------------------------
 
 
 #--------------------------------------------------------------------------------
 #:adaptive_de_rand_1_bin_radiuslimited
-el_res_para_0 = @elapsed res_para_0  = bboptimize(opt_problem_distri,MaxFuncEvals = 40)
-el_res_para_1 = @elapsed res_para_1  = bboptimize(opt_problem_distri,MaxFuncEvals = 80)
-el_res_para_2 = @elapsed res_para_2  = bboptimize(opt_problem_distri,MaxFuncEvals = 120)
-sleep(120)
-el_res_para_3 = @elapsed res_para_3  = bboptimize(opt_problem_distri,MaxFuncEvals = 160)
-el_res_para_4 = @elapsed res_para_4  = bboptimize(opt_problem_distri,MaxFuncEvals = 200)
-el_res_para_5 = @elapsed res_para_5  = bboptimize(opt_problem_distri,MaxFuncEvals = 260)
-el_res_para_6 = @elapsed res_para_6  = bboptimize(opt_problem_distri,MaxFuncEvals = 300)
-el_res_para_6 = @elapsed res_para_6  = bboptimize(opt_problem_distri,MaxFuncEvals = 400)
+el_res_para_0 = @elapsed res_para_0  = bboptimize(opt_problem_distri,MaxFuncEvals = 25)
 sleep(180)
-el_res_para_7 = @elapsed res_para_7  = bboptimize(opt_problem_distri,MaxFuncEvals = 500)
-el_res_para_8 = @elapsed res_para_8  = bboptimize(opt_problem_distri,MaxFuncEvals = 700)
+el_res_para_1 = @elapsed res_para_1  = bboptimize(opt_problem_distri,MaxFuncEvals = 90)
 sleep(180)
+el_res_para_2 = @elapsed res_para_2  = bboptimize(opt_problem_distri,MaxFuncEvals = 350)
+sleep(180)
+el_res_para_3 = @elapsed res_para_3  = bboptimize(opt_problem_distri,MaxFuncEvals = 430)
+sleep(180)
+el_res_para_4 = @elapsed res_para_4  = bboptimize(opt_problem_distri,MaxFuncEvals = 800)
+el_res_para_5 = @elapsed res_para_4  = bboptimize(opt_problem_distri,MaxFuncEvals = 1000)
+sleep(180)
+el_res_para_6 = @elapsed res_para_6  = bboptimize(opt_problem_distri,MaxFuncEvals = 1200)
+sleep(180)
+el_res_para_7 = @elapsed res_para_7  = bboptimize(opt_problem_distri,MaxFuncEvals = 1400)
+sleep(180)
+el_res_para_8 = @elapsed res_para_8  = bboptimize(opt_problem_distri,MaxFuncEvals = 1600)
+
+#el_res_para_3 = @elapsed res_para_3  = bboptimize(opt_problem_distri,MaxFuncEvals = 160)
+#el_res_para_4 = @elapsed res_para_4  = bboptimize(opt_problem_distri,MaxFuncEvals = 200)
+#el_res_para_5 = @elapsed res_para_5  = bboptimize(opt_problem_distri,MaxFuncEvals = 260)
+#el_res_para_6 = @elapsed res_para_6  = bboptimize(opt_problem_distri,MaxFuncEvals = 300)
+#el_res_para_6 = @elapsed res_para_6  = bboptimize(opt_problem_distri,MaxFuncEvals = 400)
+#el_res_para_7 = @elapsed res_para_7  = bboptimize(opt_problem_distri,MaxFuncEvals = 500)
+#el_res_para_8 = @elapsed res_para_8  = bboptimize(opt_problem_distri,MaxFuncEvals = 700)
+
 el_res_para_9 = @elapsed res_para_9  = bboptimize(opt_problem_distri,MaxFuncEvals = 900)
-sleep(180*3)
-el_res_para_91 = @elapsed res_para_91  = bboptimize(opt_problem_distri,MaxFuncEvals = 1100)
-el_res_para_92 = @elapsed res_para_92  = bboptimize(opt_problem_distri,MaxFuncEvals = 1300)
-el_res_para_93 = @elapsed res_para_93  = bboptimize(opt_problem_distri,MaxFuncEvals = 1500)
+#el_res_para_91 = @elapsed res_para_91  = bboptimize(opt_problem_distri,MaxFuncEvals = 1100)
+#el_res_para_92 = @elapsed res_para_92  = bboptimize(opt_problem_distri,MaxFuncEvals = 1300)
+#el_res_para_93 = @elapsed res_para_93  = bboptimize(opt_problem_distri,MaxFuncEvals = 1500)
+#el_res_para_94 = @elapsed res_para_94  = bboptimize(opt_problem_distri,MaxFuncEvals = 1700)
+#el_res_para_95 = @elapsed res_para_95  = bboptimize(opt_problem_distri,MaxFuncEvals = 1900)
 
-#el_res_para_9 = @elapsed res_para_9  = bboptimize(opt_problem_distri,MaxFuncEvals = 1000)
+el_res_para_10 = @elapsed res_para_10  = bboptimize(opt_problem_distri,MaxFuncEvals = 2000)
 
-@info "Finished computation. Best Candidate: " best_candidate(res_para_6)
-@info "Finished computation. Best Fitness: ", best_fitness(res_para_6)
+#el_res_para_97 = @elapsed res_para_97  = bboptimize(opt_problem_distri,MaxFuncEvals = 2200)
+#el_res_para_98 = @elapsed res_para_98  = bboptimize(opt_problem_distri,MaxFuncEvals = 2150)
+#el_res_para_10 = @elapsed res_para_10  = bboptimize(opt_problem_distri,MaxFuncEvals = 2500)
+#sleep(60*5)
+#el_res_para_11 = @elapsed res_para_11  = bboptimize(opt_problem_distri,MaxFuncEvals = 2750)
+#sleep(60*5)
+#el_res_para_12 = @elapsed res_para_12  = bboptimize(opt_problem_distri,MaxFuncEvals = 3000)
+#sleep(60*5)
+#el_res_para_13 = @elapsed res_para_13  = bboptimize(opt_problem_distri,MaxFuncEvals = 3250)
+#sleep(60*5)
+#el_res_para_14 = @elapsed res_para_14  = bboptimize(opt_problem_distri,MaxFuncEvals = 3050)
+#sleep(60*5)
+#el_res_para_15 = @elapsed res_para_15  = bboptimize(opt_problem_distri,MaxFuncEvals = 3250)
+#sleep(60*5)
+#el_res_para_15 = @elapsed res_para_15  = bboptimize(opt_problem_distri,MaxFuncEvals = 3750)
+#sleep(60*5)
+#el_res_para_15 = @elapsed res_para_15  = bboptimize(opt_problem_distri,MaxFuncEvals = 4000)
+#sleep(60*5)
+#el_res_para_16 = @elapsed res_para_16  = bboptimize(opt_problem_distri,MaxFuncEvals = 4500)
+#sleep(60*5)
+#el_res_para_17 = @elapsed res_para_17  = bboptimize(opt_problem_distri,MaxFuncEvals = 4500)
+#sleep(60*5)
+#el_res_para_18 = @elapsed res_para_18  = bboptimize(opt_problem_distri,MaxFuncEvals = 5000)
+#sleep(60*5)
+#el_res_para_19 = @elapsed res_para_19  = bboptimize(opt_problem_distri,MaxFuncEvals = 5500)
+#sleep(60*5)
+#el_res_para_20 = @elapsed res_para_20  = bboptimize(opt_problem_distri,MaxFuncEvals = 5670)
+
+el_res_para_21 = @elapsed res_para_21  = bboptimize(opt_problem_distri,MaxFuncEvals = 6000)
+
+@info "Finished computation. Best Candidate: " best_candidate(res_para_10)
+@info "Finished computation. Best Fitness: ", best_fitness(res_para_10)
 
 
 results = Dict(
-    :params       => best_candidate(res_para_6),
-    :fitness      => best_fitness(res_para_6),
-    :compute_time => el_res_para_6
+    :params       => best_candidate(res_para_10),
+    :fitness      => best_fitness(res_para_10),
+    :compute_time => el_res_para_10
 )
 
 open("results.json", "w") do io
@@ -882,3 +940,43 @@ ENV["RESULTS_FILE"] = "results.json"
 #Best candidate found: [1.34005, 0.63251, 8.1383, 7.91541, 0.137548, 0.0404029, 0.243291, 0.429979, 0.374904, 0.170433, 0.372375, 0.449883, 0.00656405, 0.00803516]        
 #Fitness: 6.289000000
 #945.0906414
+
+#Total function evaluations = 1301
+#Best candidate found: [0.158083, 1.17033, 8.75284, 5.50769, 0.0423331, 0.0162293, 0.0383456, 0.12719, 0.155837, 0.158567, 0.109492, 0.174193, 0.00742637, 0.00464812]
+#Fitness: 2.465000000
+#7456.1582823
+
+#Total function evaluations = 1501
+#Best candidate found: [0.804304, 0.535822, 4.82941, 5.1334, 0.131756, 0.0443801, 0.0259875, 0.0403372, 0.232735, 0.179389, 0.0540461, 0.194248, 0.00643722, 0.0136332]
+#Fitness: 2.348000000
+#6550.8437138
+
+#Total function evaluations = 1701
+#Best candidate found: [0.804304, 0.535822, 4.82941, 5.1334, 0.131756, 0.0443801, 0.0259875, 0.0403372, 0.232735, 0.179389, 0.0540461, 0.194248, 0.00643722, 0.0136332]
+#Fitness: 2.348000000
+#6819.0923723
+
+#Total function evaluations = 1901
+#Best candidate found: [0.0903731, 0.689334, 7.17721, 4.25469, 0.0888119, 0.0537701, 0.0670776, 0.0261428, 0.191014, 0.16513, 0.054402, 0.199067, 0.00649658, 0.00163299]
+#Fitness: 2.084000000
+#6786.6676369
+
+#Total function evaluations = 2151
+#Best candidate found: [0.134824, 1.12516, 9.02693, 3.58708, 0.143124, 0.0688218, 0.212381, 0.045744, 0.15224, 0.202697, 0.433269, 0.152533, 0.0185587, 0.014037]
+#Fitness: 1.833000000
+#480.2746346
+
+#Best candidate found: [0.13099, 1.11802, 9.53921, 3.43716, 0.139539, 0.111527, 0.212741, 0.0650087, 0.150087, 0.172455, 0.446242, 0.138868, 0.0199314, 0.00902507]
+#Fitness: 1.711000000
+#9604.3131978
+
+☺#Total function evaluations = 5671
+☺#Best candidate found: [0.13099, 1.11802, 9.53921, 3.43716, 0.139539, 0.111527, 0.212741, 0.0650087, 0.150087, 0.172455, 0.446242, 0.138868, 0.0199314, 0.00902507]
+☺#Fitness: 1.711000000
+  
+#--------------------------------------------------------------------------------
+#After fixing the seedTotal function evaluations = 251
+
+#Best candidate found: [1.63806, 0.0368019, 6.07131, 4.61988, 0.131602, 0.132433, 0.416256, 0.400466, 0.285924, 0.406623, 0.460711, 0.440975, 0.00317352, 0.00984838]      
+#Fitness: 3.595000000
+#7459.4824074
